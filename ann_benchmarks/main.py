@@ -317,6 +317,7 @@ def main():
         count=args.count,
         base_dir=args.definitions,
     )
+    
     random.shuffle(definitions)
 
     definitions = filter_already_run_definitions(definitions, 
@@ -325,21 +326,20 @@ def main():
         batch=args.batch, 
         force=args.force,
     )
+    
 
     if args.algorithm:
         logger.info(f"running only {args.algorithm}")
         definitions = [d for d in definitions if d.algorithm == args.algorithm]
-
+    
     if not args.local:
         definitions = filter_by_available_docker_images(definitions)
     else:
         definitions = list(filter(
             check_module_import_and_constructor, definitions
         ))
-
     definitions = filter_disabled_algorithms(definitions) if not args.run_disabled else definitions
     definitions = limit_algorithms(definitions, args.max_n_algorithms)
-
     if len(definitions) == 0:
         raise Exception("Nothing to run")
     else:
