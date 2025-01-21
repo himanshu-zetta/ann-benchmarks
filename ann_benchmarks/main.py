@@ -68,7 +68,9 @@ def run_worker(cpu: int, mem_limit: int, args: argparse.Namespace, queue: multip
     while not queue.empty():
         definition = queue.get()
         if args.local:
+            print("Running in local mode..")
             run(definition, args.dataset, args.count, args.runs, args.batch)
+
         else:
             cpu_limit = str(cpu) if not args.batch else f"0-{multiprocessing.cpu_count() - 1}"
             

@@ -17,11 +17,12 @@ class Milvus(BaseANN):
         self._metric = metric
         self._dim = dim
         self._metric_type = metric_mapping(self._metric)
-        self.start_milvus()
+        # self.start_milvus()
         self.connects = connections
         max_trys = 10
         for try_num in range(max_trys):
             try:
+                print("TRying to connect to milvus...")
                 self.connects.connect("default", host='localhost', port='19530')
                 break
             except Exception as e:
