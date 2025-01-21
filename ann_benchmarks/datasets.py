@@ -566,10 +566,8 @@ def dbpedia_entities_openai_1M(out_fn, n = None):
     from datasets import load_dataset
     import numpy as np
 
-    # data = load_dataset("KShivendu/dbpedia-entities-openai-1M", split="train")
-    import polars as pl
+    data = load_dataset("KShivendu/dbpedia-entities-openai-1M", split="train")
 
-    df = pl.read_parquet('hf://datasets/KShivendu/dbpedia-entities-openai-1M/data/train-*-of-*.parquet')
  
     if n is not None and n >= 100_000:
         data = data.select(range(n))
