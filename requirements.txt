@@ -18,8 +18,8 @@ filelock==3.16.1
 fonttools==4.55.3
 frozenlist==1.5.0
 fsspec==2024.12.0
-grpcio==1.69.0
-grpcio-tools==1.69.0
+grpcio==1.67.1
+grpcio-tools==1.67.1
 h11==0.14.0
 h2==4.1.0
 h5py==3.12.1

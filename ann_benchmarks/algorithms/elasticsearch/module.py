@@ -4,6 +4,7 @@ from elasticsearch import ConnectionError, Elasticsearch
 from elasticsearch.helpers import bulk
 
 from ..base.module import BaseANN
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 class ElasticsearchKNN(BaseANN):
@@ -48,7 +49,7 @@ class ElasticsearchKNN(BaseANN):
                 pass
             sleep(1)
         raise RuntimeError("Failed to connect to Elasticsearch")
-
+    
     def fit(self, X):
         settings = {
             "number_of_shards": 1,
@@ -72,22 +73,57 @@ class ElasticsearchKNN(BaseANN):
                 },
             },
         }
+        if self.client.indices.exists(index=self.index_name):
+            print(f"Index {self.index_name} already exists. Skipping...")
+            return
         self.client.indices.create(index=self.index_name, settings=settings, mappings=mappings)
 
-        def gen():
-            for i, vec in enumerate(X):
-                yield {"_op_type": "index", "_index": self.index_name, "id": str(i), "vec": vec.tolist()}
+        def gen_bulk(start, end):
+            for i in range(start, end):
+                yield {
+                    "_op_type": "index",
+                    "_index": self.index_name,
+                    "id": str(i),
+                    "vec": X[i].tolist(),
+                }
 
-        print("Indexing ...")
-        (_, errors) = bulk(self.client, gen(), chunk_size=500, request_timeout=90)
-        if len(errors) != 0:
-            raise RuntimeError("Failed to index documents")
+        batch_size = 5000  # Increased batch size
+        num_threads = 96  # Adjust based on CPU cores and cluster capacity
+
+        with ThreadPoolExecutor(max_workers=num_threads) as executor:
+            futures = []
+            total_docs = len(X)
+            for start in range(0, total_docs, batch_size):
+                end = min(start + batch_size, total_docs)
+                futures.append(executor.submit(self._bulk_index, gen_bulk(start, end)))
+
+            for future in as_completed(futures):
+                success, errors = future.result()
+                if not success:
+                    print(f"Bulk indexing encountered errors: {errors}")
+                    if len(errors) != 0:
+                        raise RuntimeError("Failed to index documents")
 
         print("Force merge index ...")
-        self.client.indices.forcemerge(index=self.index_name, max_num_segments=1, request_timeout=900)
+        # self.client.indices.forcemerge(index=self.index_name, max_num_segments=1, request_timeout=900)
 
         print("Refreshing index ...")
         self.client.indices.refresh(index=self.index_name, request_timeout=900)
+
+    def _bulk_index(self, bulk_gen):
+        try:
+            success, errors = bulk(
+                self.client,
+                bulk_gen,
+                chunk_size=5000,
+                request_timeout=300,
+                raise_on_error=False,
+                raise_on_exception=False
+            )
+            return success, errors
+        except Exception as e:
+            print(f"Exception during bulk indexing: {e}")
+            return False, [str(e)]
 
     def set_query_arguments(self, num_candidates):
         self.num_candidates = num_candidates

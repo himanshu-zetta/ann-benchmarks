@@ -12,7 +12,7 @@ float:
           {ef_construction: 128, m: 16},
         ]
         args: {}
-        query_args: [[8, 16, 32, 64, 128]]
+        query_args: [[32, 64, 128]]
   # euclidean:
   # - base_args: ['@metric', '@dimension']
   #   constructor: ElasticsearchKNN
